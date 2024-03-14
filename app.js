@@ -7,9 +7,10 @@ const helmet = require('helmet');
 const mongoSanitize = require('express-mongo-sanitize');
 const xss = require('xss-clean');
 const hpp = require('hpp');
+const cors = require('cors');
+const cookieParser = require('cookie-parser');
 const globalErrorController = require('./Controllers/errorController');
 const AppError = require('./utils/appError');
-
 // eslint-disable-next-line import/no-dynamic-require
 const userRouter = require(`${__dirname}/routes/userRoutes`);
 const tourRouter = require(`${__dirname}/routes/tourRoutes`);
@@ -17,13 +18,19 @@ const reviewRouter = require(`./routes/reviewRoutes`);
 const viewRouter = require(`./routes/viewRoutes`);
 
 const app = express();
+app.use(
+  cors({
+    origin: 'http://localhost:3000', // or your frontend's origin
+    credentials: true, // crucial for cookies to be sent with requests from the frontend
+  })
+);
 app.use(express.static(path.join(__dirname, 'public')));
-
+app.use(cookieParser());
 app.set('view engine', 'pug');
 app.set('views', path.join(__dirname, 'views'), 'views');
 
 // SECURITY
-app.use(helmet());
+app.use(helmet({ crossOriginEmbedderPolicy: false }));
 // DEVELOPMENT LOGGING
 if (process.env.NODE_ENV === 'development') {
   app.use(morgan('dev'));
@@ -37,10 +44,48 @@ app.use('/api', limiter);
 
 app.use((req, res, next) => {
   req.requestTime = new Date().toISOString();
-  console.log(req.headers);
+  console.log(req.cookies);
   next();
 });
 
+// Further HELMET configuration for Security Policy (CSP)
+const scriptSrcUrls = [
+  'https://unpkg.com/',
+  'https://tile.openstreetmap.org',
+  'https://cdnjs.cloudflare.com',
+];
+const styleSrcUrls = [
+  'https://unpkg.com/',
+  'https://tile.openstreetmap.org',
+  'https://fonts.googleapis.com/',
+];
+const connectSrcUrls = [
+  'https://unpkg.com',
+  'https://tile.openstreetmap.org',
+  'https://cdnjs.cloudflare.com',
+  'ws://127.0.0.1:*/',
+  'ws://localhost:*',
+  'https://bundle.js:*',
+  'ws://127.0.0.1:*/',
+  'http://127.0.0.1:*',
+  'http://localhost:3000/js/bundled.js',
+];
+const fontSrcUrls = ['fonts.googleapis.com', 'fonts.gstatic.com'];
+
+app.use(
+  helmet.contentSecurityPolicy({
+    directives: {
+      defaultSrc: [],
+      connectSrc: ["'self'", ...connectSrcUrls],
+      scriptSrc: ["'self'", ...scriptSrcUrls],
+      styleSrc: ["'self'", "'unsafe-inline'", ...styleSrcUrls],
+      workerSrc: ["'self'", 'blob:'],
+      objectSrc: [],
+      imgSrc: ["'self'", 'blob:', 'data:', 'https:'],
+      fontSrc: ["'self'", ...fontSrcUrls],
+    },
+  })
+);
 // Body parser, reading data from body into req.body
 app.use(express.json({ limit: '10kb' }));
 
@@ -56,7 +101,7 @@ app.use(
       'price',
       'difficulty',
     ],
-  }),
+  })
 );
 // 3. Routes
 // Router Handlers

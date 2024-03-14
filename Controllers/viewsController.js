@@ -3,7 +3,7 @@ const Tour = require('../Model/tourModel');
 const catchAsync = require('../utils/catchAsync');
 const review = require('../Model/reviewModel');
 const user = require('../Model/userModel');
-const tour = require('../Model/tourModel');
+const AppError = require('../utils/appError');
 
 exports.getOverview = catchAsync(async (req, res) => {
   //1) Get tour data from collection
@@ -14,15 +14,29 @@ exports.getOverview = catchAsync(async (req, res) => {
 
   res.status(200).render('overview', {
     title: 'All Tours',
-    tours: tours,
+    tours,
+    user: req.user,
   });
 });
-exports.getTour = catchAsync(async (req, res) => {
+exports.getTour = catchAsync(async (req, res, next) => {
   const tour = await Tour.findOne({ slug: req.params.slug }).populate({
     path: 'reviews',
     fields: 'review rating user',
   });
+  if (!tour) {
+    return next(new AppError('There is no tour with that name.', 404));
+  }
+
+  // 2) Build template
+  // 3) Render template using data from 1)
   res.status(200).render('tour', {
-    title: 'The forest Hiker Tour',
+    title: `${tour.name} Tour`,
+    tour,
+  });
+});
+
+exports.getLoginPage = catchAsync(async (req, res, next) => {
+  res.status(200).render('login', {
+    title: 'Log into your account',
   });
 });

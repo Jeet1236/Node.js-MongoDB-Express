@@ -75,16 +75,16 @@ const tourSchema = new mongoose.Schema(
     imageCover: {
       type: String,
       required: [true, 'A tour must have the cover image'],
-      images: [String],
-      createdAt: {
-        type: Date,
-        default: Date.now(),
-        selected: false,
-      },
+    },
+    images: [String],
+    createdAt: {
+      type: Date,
+      default: Date.now(),
+      selected: false,
     },
     startDates: [Date],
     secretTour: { type: Boolean, default: false },
-
+    slug: String,
     startLocation: {
       // GEOJSON
       type: {
@@ -109,7 +109,12 @@ const tourSchema = new mongoose.Schema(
         day: Number,
       },
     ],
-    guides: Array,
+    guides: [
+      {
+        type: mongoose.Schema.ObjectId,
+        ref: 'User',
+      },
+    ],
   },
   { toJSON: { virtuals: true }, toObject: { virtuals: true } },
 );
@@ -129,17 +134,17 @@ tourSchema.virtual('reviews', {
   localField: '_id', // the value of the foreignField
 });
 
-// DOCUMENT MIDDLEWARE: runs before .save() and .create()
+//DOCUMENT MIDDLEWARE: runs before .save() and .create()
 tourSchema.pre('save', function (next) {
   this.slug = slugify(this.name, { lower: true });
   next();
 });
 
-tourSchema.pre('save', async function (next) {
-  const guidesPromises = this.guides.map(async (id) => await User.findById(id));
-  this.guides = await Promise.all(guidesPromises);
-  next();
-});
+// tourSchema.pre('save', async function (next) {
+//   const guidesPromises = this.guides.map(async (id) => await User.findById(id));
+//   this.guides = await Promise.all(guidesPromises);
+//   next();
+// });
 
 //QUERY MIDDLEWARE
 tourSchema.pre(/^find/, function (next) {
