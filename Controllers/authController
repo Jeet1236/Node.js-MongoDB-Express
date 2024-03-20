@@ -62,6 +62,14 @@ exports.login = catchAsync(async (req, res, next) => {
   createSendToken(user, 200, res);
 });
 
+exports.logout = (req, res) => {
+  res.cookie('jwt', 'logged out', {
+    expires: new Date(Date.now() + 10 * 1000),
+    httpOnly: true,
+  });
+  res.status(200).json({ status: 'success' });
+};
+
 exports.protect = catchAsync(async (req, res, next) => {
   // 1) Getting token and check if it is there
   let token;
@@ -85,7 +93,7 @@ exports.protect = catchAsync(async (req, res, next) => {
   //2) Verification of  the token
 
   const decoded = await promisify(jwt.verify)(token, process.env.JSON_SECRET);
-  console.log(decoded);
+
   //3) Check if user still exists
   const freshUser = await User.findById(decoded.id);
   if (!freshUser) {
@@ -102,41 +110,46 @@ exports.protect = catchAsync(async (req, res, next) => {
 
   // Grant access to the protected route
   req.user = freshUser;
+  res.locals.user = req.user = freshUser;
   next();
 });
 
 // Only for rendered pages, no errors!
-exports.isLoggedIn = catchAsync(async (req, res, next) => {
+exports.isLoggedIn = async (req, res, next) => {
   // 1) Getting token and check if it is there
 
   if (req.cookies.jwt) {
-    //2) Verification of  the token
+    try {
+      const decoded = await promisify(jwt.verify)(
+        // 1) Verify the token
+        req.cookies.jwt,
+        process.env.JSON_SECRET
+      );
+      console.log(decoded);
+      //3) Check if user still exists
+      const currentUser = await User.findById(decoded.id);
+      if (!currentUser) {
+        next();
+      }
+      //4) Check if user changed password after the token is issued
+      if (currentUser.changedPasswordAfter(decoded.iat)) {
+        return next();
+      }
 
-    const decoded = await promisify(jwt.verify)(
-      // 1) Verify the token
-      req.cookies.jwt,
-      process.env.JSON_SECRET
-    );
-    console.log(decoded);
-    //3) Check if user still exists
-    const currentUser = await User.findById(decoded.id);
-    if (!currentUser) {
-      next();
-    }
-    //4) Check if user changed password after the token is issued
-    if (currentUser.changedPasswordAfter(decoded.iat)) {
+      // Grant access to the protected route
+      // there is a logged in user
+      // res.locals give the access of stored variable to the pug files
+      res.locals.user = req.user = currentUser;
+      return next();
+    } catch (err) {
       return next();
     }
-
-    // Grant access to the protected route
-    // there is a logged in user
-    // res.locals give the access of stored variable to the pug files
-    res.locals.user = req.user = currentUser;
-    return next();
   }
 
+  //2) Verification of  the token
+
   next();
-});
+};
 
 exports.restrictTo =
   (...roles) =>
@@ -231,6 +244,4 @@ exports.updatePassword = catchAsync(async (req, res, next) => {
   // User.findByIdAndUpdate will not work as intended!
   //4) Log user in, send JWT
   createSendToken(user, 200, res);
-
-  next();
 });

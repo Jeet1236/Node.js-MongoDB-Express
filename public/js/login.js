@@ -1,6 +1,6 @@
 /* eslint-disable */
-// require('@babel/polyfill');
 const axios = require('axios');
+import { showAlert } from './alerts';
 
 export const login = async (email, password) => {
   console.log(email, password);
@@ -15,13 +15,26 @@ export const login = async (email, password) => {
       },
     });
     if (res.data.status === 'success') {
-      alert('Logged in successfully');
+      showAlert('success', 'Logged in successfully');
       window.setTimeout(() => {
         location.assign('/');
       }, 1500);
     }
     console.log(res);
   } catch (err) {
-    console.log(err.response.data);
+    showAlert('error', err.response.data.message);
+  }
+};
+
+export const logout = async () => {
+  try {
+    const res = await axios({
+      method: 'GET',
+      url: 'http://127.0.0.1:3000/api/v1/users/logout',
+    });
+    // reload(true) code will load the response from the server otherwise it can load the cached dat only.
+    if ((res.data.status = 'success')) location.reload(true);
+  } catch (err) {
+    showAlert('error', 'Error logging out! Try again.');
   }
 };
