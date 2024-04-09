@@ -2,6 +2,9 @@
 // const AppError = require('../utils/appError');
 const Review = require('../Model/reviewModel');
 const handlerFactory = require('./handlerFactory');
+const catchAsync = require('../utils/catchAsync');
+const AppError = require('../utils/appError');
+const Booking = require('../Model/bookingModel');
 
 exports.setTourUserIds = (req, res, next) => {
   if (!req.body.tour) req.body.tour = req.params.tourId;
@@ -18,3 +21,17 @@ exports.deleteReview = handlerFactory.deleteOne(Review);
 exports.updateReview = handlerFactory.updateOne(Review);
 
 exports.getReview = handlerFactory.getOne(Review);
+exports.checkBooking = catchAsync(async (req, res, next) => {
+  const bookings = await Booking.find({
+    tour: req.body.tour,
+    user: req.body.user,
+  });
+  console.log('boojjoj' + bookings);
+  if (bookings.length === 0) {
+    return next(
+      new AppError('You need to purchase the tour for reviewing it', 400)
+    );
+  }
+
+  next();
+});

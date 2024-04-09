@@ -1,12 +1,14 @@
 import { login, logout } from './login.js';
 import { displayMap } from './leaflet.js';
 import { updateSettings } from './updateSettings.js';
+import { bookTour } from './stripe';
 
 const leaflet = document.getElementById('map');
 const loginForm = document.querySelector('.form--login');
 const logOutBtn = document.querySelector('.nav__el--logout');
 const userDataForm = document.querySelector('.form-user-data');
 const userPasswordForm = document.querySelector('.form-user-password');
+const bookBtn = document.getElementById('book-tour');
 
 if (leaflet) {
   const locations = JSON.parse(
@@ -31,16 +33,19 @@ if (logOutBtn) logOutBtn.addEventListener('click', logout);
 if (userDataForm) {
   userDataForm.addEventListener('submit', (e) => {
     e.preventDefault();
-    console.log('Hello World');
-    const email = document.getElementById('email').value;
-    const name = document.getElementById('name').value;
-    console.log('werwr' + email + name);
-    updateSettings({ name, email }, 'data');
+    // We create the formData because it the form also include files
+    const form = new FormData();
+    form.append('name', document.getElementById('name').value);
+    form.append('email', document.getElementById('email').value);
+    form.append('photo', document.getElementById('photo').files[0]);
+    console.log(form);
+    updateSettings(form, 'data');
   });
 }
 if (userPasswordForm) {
   userPasswordForm.addEventListener('submit', async (e) => {
     e.preventDefault();
+
     document.querySelector('.btn-save-password').innerHTML = 'Updating';
     const passwordCurrent = document.getElementById('password-current').value;
     const password = document.getElementById('password').value;
@@ -53,5 +58,12 @@ if (userPasswordForm) {
     document.getElementById('password-current').value = '';
     document.getElementById('password').value = '';
     document.getElementById('password-confirm').value = '';
+  });
+}
+if (bookBtn) {
+  bookBtn.addEventListener('click', (e) => {
+    e.target.textContent = 'Processing...';
+    const { tourId } = e.target.dataset;
+    bookTour(tourId);
   });
 }

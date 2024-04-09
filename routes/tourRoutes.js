@@ -25,11 +25,11 @@ Router.route('/tour-stats').get(getTourStats);
 Router.route('/monthly-plan/:year').get(
   getMonthlyPlan,
   authController.protect,
-  authController.restrictTo('admin', 'lead-guide', 'guide'),
+  authController.restrictTo('admin', 'lead-guide', 'guide')
 );
 
 Router.route('/tours-within/:distance/center/:latlng/unit/:unit').get(
-  getToursWithin,
+  getToursWithin
 );
 
 Router.route('/distances/:latlng/unit/:unit').get(tourController.getDistances);
@@ -40,7 +40,7 @@ Router.route('/')
     authController.protect,
     authController.restrictTo('admin', 'lead-guide'),
     middleware,
-    createTour,
+    createTour
   );
 
 Router.route('/:id')
@@ -48,12 +48,14 @@ Router.route('/:id')
   .delete(
     authController.protect,
     authController.restrictTo('admin', 'lead-guide'),
-    deleteTour,
+    deleteTour
   )
   .patch(
     authController.protect,
     authController.restrictTo('admin', 'lead-guide'),
-    updateTour,
+    tourController.uploadTourImages,
+    tourController.resizeTourImages,
+    updateTour
   );
 
 Router.use('/:tourId/reviews', reviewRouter);
@@ -62,4 +64,10 @@ Router.use('/:tourId/reviews', reviewRouter);
 //   authController.restrictTo('user'),
 //   reviewController.createReview,
 // );
+
+Router.route('/:id/bookings').get(
+  authController.isLoggedIn,
+  authController.restrictTo('admin', 'lead-guide'),
+  tourController.getBookings
+);
 module.exports = Router;

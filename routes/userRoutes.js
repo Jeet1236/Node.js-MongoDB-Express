@@ -18,17 +18,28 @@ Router.get('/logout', authController.logout);
 
 Router.post('/forgotPassword', authController.forgotPassword);
 Router.patch('/resetPassword/:token', authController.resetPassword);
+
 // Protect all these routes after this line
 Router.use(authController.protect);
 
 Router.get('/me', userController.getMe, userController.getUser);
 
 Router.patch('/updatePasswords', authController.updatePassword);
-Router.patch('/updateMe', userController.updateMe);
+Router.patch(
+  '/updateMe',
+  userController.uploadUserPhoto,
+  userController.resizeUserPhoto,
+  userController.updateMe
+);
 Router.delete('/deleteMe', userController.deleteMe);
 
 Router.route('/').get(getAllUsers).post(createUser);
 
 Router.route('/:id').get(getUser).patch(updateUser).delete(deleteUser);
+Router.route('/:id/bookings').get(
+  authController.isLoggedIn,
+  authController.restrictTo('admin', 'lead-guide'),
+  userController.getBookings
+);
 
 module.exports = Router;
